@@ -1,0 +1,42 @@
+{
+  "name": "Requirement",
+  "type": "object",
+  "properties": {
+    "original_input": {
+      "type": "string",
+      "description": "Original user requirement input"
+    },
+    "domain_classification": {
+      "type": "string",
+      "description": "Domain classified by the Domain Classifier Agent"
+    },
+    "collector_keywords": {
+      "type": "string",
+      "description": "Keywords extracted by Collector Agent"
+    },
+    "clarifier_suggestions": {
+      "type": "string",
+      "description": "Clarification suggestions from Clarifier Agent"
+    },
+    "validator_feedback": {
+      "type": "string",
+      "description": "Validation feedback from Validator Agent"
+    },
+    "refined_output": {
+      "type": "string",
+      "description": "Final refined requirement from Refiner Agent"
+    },
+    "processing_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "processing",
+        "completed"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": [
+    "original_input"
+  ]
+}
