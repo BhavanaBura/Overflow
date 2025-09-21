@@ -1,0 +1,102 @@
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, Copy, Download, RefreshCw } from "lucide-react";
+import { motion } from "framer-motion";
+
+export default function FinalOutput({ 
+  refinedOutput, 
+  onSave, 
+  onStartOver, 
+  isSaving 
+}) {
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(refinedOutput);
+  };
+
+  const downloadAsText = () => {
+    const blob = new Blob([refinedOutput], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'refined-requirement.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+    >
+      <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200/60 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-xl text-emerald-800">
+            <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-white" />
+            </div>
+            Final Refined Requirement
+          </CardTitle>
+          <p className="text-emerald-700">
+            Your requirement has been successfully processed and refined by all agents.
+          </p>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="bg-white rounded-lg p-6 border border-emerald-200/60 shadow-sm">
+            <div className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+              {refinedOutput}
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-3 justify-between">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={copyToClipboard}
+                className="flex items-center gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              >
+                <Copy className="w-4 h-4" />
+                Copy
+              </Button>
+              <Button
+                variant="outline"
+                onClick={downloadAsText}
+                className="flex items-center gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </Button>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={onStartOver}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Start Over
+              </Button>
+              <Button
+                onClick={onSave}
+                disabled={isSaving}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white flex items-center gap-2"
+              >
+                {isSaving ? (
+                  <div className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                Save to History
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
