@@ -1,0 +1,265 @@
+
+import React, { useState } from "react";
+import { InvokeLLM } from "@/integrations/Core";
+import { Requirement } from "@/entities/Requirement";
+import InputForm from "../components/processing/InputForm";
+import AgentCard from "../components/agents/AgentCard";
+import FinalOutput from "../components/processing/FinalOutput";
+
+const agents = [
+  {
+    id: "domain_classifier",
+    name: "Domain Classifier Agent",
+    description: "Identifies the requirement's domain",
+    color: "bg-gradient-to-r from-cyan-500 to-teal-500",
+    prompt: (input) => `You are a Domain Classifier Agent. Classify the requirement into one of the following domains based on its content and keywords.
+
+Domains and their keywords:
+- "Finance": ["payment","invoice","bank","credit","transaction","loan","tax","billing","investment","portfolio","budget","finance","accounting","fund","capital","interest","insurance","stocks","crypto","retirement","audit","financial planning"]
+- "Healthcare": ["patient","medicine","doctor","hospital","health","treatment","clinic","diagnosis","surgery","nurse","pharmacy","therapy","wellness","disease","vaccine","nutrition","mental health","laboratory","rehabilitation","medical device"]
+- "E-commerce": ["cart","checkout","product","shop","order","payment","delivery","discount","customer","seller","inventory","return","marketplace","online store","subscription","coupon","e-tail"]
+- "Education": ["student","course","lesson","exam","teacher","lecture","school","college","university","curriculum","learning","assignment","homework","class","study","online learning","training","seminar","workshop","tutorial"]
+- "Travel": ["flight","hotel","booking","ticket","destination","tour","vacation","trip","itinerary","passport","cruise","resort","transport","travel insurance","adventure","tourism","excursion","holiday","journey"]
+- "Social Media": ["post","like","share","comment","profile","story","follower","tweet","connection","message","notification","social","network","platform","content","engagement","influencer","media","trend"]
+- "Technology": ["software","hardware","database","AI","machine learning","programming","cloud","network","server","IoT","cybersecurity","app","development","algorithm","blockchain","VR","AR","robotics","automation","electronics","big data","data science"]
+- "Human Resources": ["employee","salary","attendance","leave","recruitment","hiring","interview","onboarding","performance","training","benefits","HR","retention","promotion","workforce","payroll","policy","career development","organization management"]
+- "Logistics": ["warehouse","supply","inventory","shipment","freight","delivery","tracking","distribution","carrier","route","transport","packaging","logistics management","supply chain","fleet","procurement","shipping","cargo","import","export"]
+- "Entertainment": ["movie","music","video","song","concert","show","theater","game","celebrity","festival","performance","TV","streaming","media","art","animation","comic","gaming","broadcast","event","radio"]
+- "Government & Legal": ["law","policy","court","government","taxation","regulation","legislation","compliance","bill","legal","public","administration","permit","authority","jurisdiction","election","governance","diplomacy","statute"]
+- "Real Estate": ["property","rent","lease","sale","apartment","house","mortgage","land","realty","broker","listing","valuation","developer","commercial property","residential","real estate agent","housing","condo","office space"]
+- "Sports": ["match","tournament","player","team","score","league","coach","stadium","competition","athlete","game","championship","training","fitness","olympics","soccer","basketball","cricket","tennis","swimming","marathon"]
+- "Automotive": ["car","vehicle","engine","automobile","driver","fuel","maintenance","dealership","insurance","transportation","EV","road","traffic","motorbike","truck","fleet","charging","autonomous vehicle","automotive technology"]
+- "Energy & Utilities": ["electricity","gas","water","power","renewable","oil","energy","utility","grid","solar","wind","nuclear","consumption","battery","fossil fuel","hydropower","energy efficiency","sustainability"]
+- "Food & Beverage": ["restaurant","menu","dish","cuisine","chef","recipe","food","beverage","delivery","nutrition","meal","snack","dining","cafe","grocery","bar","brewery","fast food","organic food","drink"]
+- "Telecommunications": ["network","mobile","internet","phone","data","signal","telecom","coverage","broadband","call","SMS","5G","fiber","ISP","satellite","VoIP","communication","telephony"]
+- "Retail": ["store","shop","brand","customer","sale","merchandise","checkout","inventory","product","promotion","discount","mall","boutique","supermarket","e-tailing","franchise","retail chain"]
+- "Non-Profit / NGO": ["donation","volunteer","charity","campaign","fundraising","awareness","community","project","cause","organization","social work","philanthropy","advocacy","non-profit","grant"]
+- "Science & Research": ["experiment","research","laboratory","study","analysis","scientist","discovery","data","publication","theory","physics","chemistry","biology","genetics","astronomy","innovation"]
+- "Manufacturing & Industry": ["factory","production","assembly","machinery","automation","process","quality","materials","engineering","plant","industrial","supply chain","operations","manufacturing technology"]
+- "Marketing & Advertising": ["campaign","brand","promotion","advertisement","SEO","social media","email marketing","content","strategy","target audience","PR","market research","digital marketing"]
+- "Media & Publishing": ["journalism","news","article","magazine","report","editor","publication","press","content creation","broadcast","writing","literature","blogging"]
+- "Insurance": ["policy","claim","premium","coverage","risk","underwriting","beneficiary","actuary","health insurance","life insurance","auto insurance","property insurance"]
+- "Legal Services": ["lawyer","attorney","case","litigation","contract","legal advice","compliance","intellectual property","notary","legal document","arbitration"]
+- "General": []
+
+Requirement: "${input}"
+
+Analyze the requirement and match it against the keywords for each domain. Return only the name of the most relevant domain that best matches the content and context of the requirement.`
+  },
+  {
+    id: "collector",
+    name: "Collector Agent",
+    description: "Extracts key terms and concepts",
+    color: "bg-gradient-to-r from-blue-500 to-blue-600",
+    prompt: (input) => `You are a Collector Agent. Extract the most important keywords from this requirement: "${input}". Return only keywords, comma-separated.`
+  },
+  {
+    id: "clarifier", 
+    name: "Clarifier Agent",
+    description: "Identifies ambiguous phrases using context",
+    color: "bg-gradient-to-r from-purple-500 to-purple-600",
+    prompt: (input, domainClassification, collectorKeywords) => `You are a Clarifier Agent. 
+
+Context:
+- Original Requirement: "${input}"
+- Domain: ${domainClassification}
+- Key Terms: ${collectorKeywords}
+
+Using the domain context and key terms, identify the main ambiguous words/phrases in the original requirement and provide a concise summary.
+
+Return a brief summary in this format:
+• Ambiguous terms: [list 2-3 main unclear terms/phrases]
+• Key clarifications needed: [2-3 specific questions to resolve ambiguities]
+• Risk level: [High/Medium/Low based on clarity]
+
+Keep the response concise and actionable.`
+  },
+  {
+    id: "validator",
+    name: "Validator Agent", 
+    description: "Checks completeness and correctness",
+    color: "bg-gradient-to-r from-amber-500 to-amber-600",
+    prompt: (input) => `You are a Validator Agent. Check if the requirement is complete and correct. Return 'Complete' if okay; otherwise, list missing info: "${input}"`
+  },
+  {
+    id: "refiner",
+    name: "Refiner Agent",
+    description: "Creates polished final output", 
+    color: "bg-gradient-to-r from-emerald-500 to-emerald-600",
+    prompt: (input) => `You are a Refiner Agent. Rewrite this requirement clearly, professionally, and actionable: "${input}"`
+  }
+];
+
+export default function ProcessorPage() {
+  const [input, setInput] = useState("");
+  const [currentStep, setCurrentStep] = useState(-1);
+  const [results, setResults] = useState({});
+  const [domain, setDomain] = useState(null); // This state will be updated by the domain_classifier agent.
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const processWithAgents = async () => {
+    setIsProcessing(true);
+    setCurrentStep(0);
+    setResults({});
+    setDomain(null); // Reset domain for a new processing run
+
+    try {
+      // Local variables to hold outputs from previous agents for subsequent ones
+      let currentDomainClassification = null;
+      let currentCollectorKeywords = null;
+
+      for (let i = 0; i < agents.length; i++) {
+        setCurrentStep(i);
+        const agent = agents[i];
+        let fullPrompt;
+        let invokeLLMOptions = { temperature: 0 }; // Default options
+
+        // Determine prompt and LLM options based on agent ID
+        if (agent.id === "domain_classifier") {
+          fullPrompt = agent.prompt(input);
+        } else if (agent.id === "collector") {
+          fullPrompt = agent.prompt(input);
+        } else if (agent.id === "validator") {
+          fullPrompt = agent.prompt(input);
+          invokeLLMOptions.response_json_schema = {
+            type: "object",
+            properties: {
+              validation_feedback: { type: "string" }
+            },
+            required: ["validation_feedback"]
+          };
+        } else if (agent.id === "clarifier") {
+          // Clarifier agent requires outputs from domain_classifier and collector
+          const domainToUse = currentDomainClassification || "General";
+          const collectorToUse = currentCollectorKeywords || "No keywords identified";
+          fullPrompt = agent.prompt(input, domainToUse, collectorToUse);
+        } else if (agent.id === "refiner") {
+          fullPrompt = agent.prompt(input);
+          invokeLLMOptions.temperature = 0.5;
+        }
+
+        const response = await InvokeLLM({
+          prompt: fullPrompt,
+          ...invokeLLMOptions
+        });
+
+        // Update local variables and state based on agent's output
+        if (agent.id === "domain_classifier") {
+          setDomain(response); // Update React state for display/future use
+          currentDomainClassification = response; // Update local variable for subsequent agents
+        } else if (agent.id === "collector") {
+          currentCollectorKeywords = response; // Update local variable for subsequent agents
+        }
+
+        setResults(prev => ({
+          ...prev,
+          [agent.id]: response
+        }));
+
+        // Add a small delay for better UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    } catch (error) {
+      console.error("Error processing with agents:", error);
+    }
+
+    setIsProcessing(false);
+    setCurrentStep(agents.length);
+  };
+
+  const saveToHistory = async () => {
+    setIsSaving(true);
+    try {
+      await Requirement.create({
+        original_input: input,
+        domain_classification: results.domain_classifier || "",
+        validator_feedback: results.validator?.validation_feedback || "",
+        collector_keywords: results.collector || "",
+        clarifier_suggestions: results.clarifier || "",
+        refined_output: results.refiner || "",
+        processing_status: "completed"
+      });
+    } catch (error) {
+      console.error("Error saving requirement:", error);
+    }
+    setIsSaving(false);
+  };
+
+  const startOver = () => {
+    setInput("");
+    setCurrentStep(-1);
+    setResults({});
+    setDomain(null);
+    setIsProcessing(false);
+  };
+
+  const getAgentStatus = (index) => {
+    if (currentStep < index) return "pending";
+    if (currentStep === index && isProcessing) return "processing";
+    if (currentStep > index || results[agents[index].id]) return "completed";
+    return "pending";
+  };
+
+  const getAgentResult = (agent) => {
+    if (!results[agent.id]) return null;
+
+    if (agent.id === "domain_classifier") {
+      return `Identified Domain: ${results[agent.id]}`;
+    }
+    if (agent.id === "validator") {
+      return `Feedback: ${results[agent.id].validation_feedback}`;
+    }
+    return results[agent.id];
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-slate-800 mb-4">
+          Multi-Agent Requirement Processor
+        </h1>
+        <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          Transform your raw requirements into polished, actionable specifications using our specialized AI agents.
+        </p>
+      </div>
+
+      <InputForm
+        input={input}
+        setInput={setInput}
+        onProcess={processWithAgents}
+        isProcessing={isProcessing}
+      />
+
+      {(isProcessing || Object.keys(results).length > 0) && (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-slate-800 mb-2">Agent Processing Pipeline</h2>
+            <p className="text-slate-600">Each agent contributes specialized analysis to refine your requirement</p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            {agents.map((agent, index) => (
+              <AgentCard
+                key={agent.id}
+                agent={agent}
+                status={getAgentStatus(index)}
+                result={getAgentResult(agent)}
+                isProcessing={currentStep === index && isProcessing}
+              />
+            ))}
+          </div>
+
+          {results.refiner && (
+            <FinalOutput
+              refinedOutput={results.refiner}
+              onSave={saveToHistory}
+              onStartOver={startOver}
+              isSaving={isSaving}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
